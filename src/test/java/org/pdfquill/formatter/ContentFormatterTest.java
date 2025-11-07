@@ -8,6 +8,7 @@ import org.pdfquill.settings.font.FontUtils;
 import org.pdfquill.writer.SplitParts;
 import org.pdfquill.writer.Text;
 import org.pdfquill.writer.TextBuilder;
+import org.pdfquill.exceptions.BarcodeGenerationException;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -71,7 +72,7 @@ class ContentFormatterTest {
             BufferedImage image = ContentFormatter.createBarcodeImage("123456", BarcodeType.CODE128, 0, 0);
             assertThat(image.getHeight()).isEqualTo(350);
             assertThat(image.getWidth()).isEqualTo(350);
-        } catch (org.pdfquill.exceptions.PrinterException ex) {
+        } catch (BarcodeGenerationException ex) {
             assumeTrue(ex.getCause() instanceof java.awt.AWTError,
                     "Unexpected failure when generating barcode image");
         }

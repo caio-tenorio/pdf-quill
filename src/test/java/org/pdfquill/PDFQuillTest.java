@@ -3,7 +3,7 @@ package org.pdfquill;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.Test;
-import org.pdfquill.exceptions.PrinterException;
+import org.pdfquill.exceptions.PDFGenerationException;
 import org.pdfquill.paper.PaperType;
 import org.pdfquill.settings.font.FontSettings;
 import org.pdfquill.settings.font.FontType;
@@ -129,7 +129,7 @@ class PDFQuillTest {
     }
 
     @Test
-    void printLineWithCustomBuilderWritesPdf() throws IOException, PrinterException {
+    void printLineWithCustomBuilderWritesPdf() throws IOException, PDFGenerationException {
         FontSettings fontSettings = new FontSettings();
         fontSettings.setFontSize(10);
 

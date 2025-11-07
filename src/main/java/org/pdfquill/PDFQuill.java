@@ -2,7 +2,9 @@ package org.pdfquill;
 
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.pdfquill.barcode.BarcodeType;
-import org.pdfquill.exceptions.PrinterException;
+import org.pdfquill.exceptions.BarcodeGenerationException;
+import org.pdfquill.exceptions.PDFExportException;
+import org.pdfquill.exceptions.PDFGenerationException;
 import org.pdfquill.formatter.ContentFormatter;
 import org.pdfquill.measurements.MeasurementUtils;
 import org.pdfquill.paper.PaperType;
@@ -98,9 +100,9 @@ public class PDFQuill {
      * Finalises the document (if necessary) and returns the content encoded as Base64.
      *
      * @return Base64 encoded PDF bytes
-     * @throws PrinterException when writing the PDF fails
+     * @throws PDFGenerationException when writing the PDF fails
      */
-    public String getBase64PDFBytes() throws PrinterException {
+    public String getBase64PDFBytes() throws PDFGenerationException {
         return DatatypeConverter.printBase64Binary(resolvePdfBytes());
     }
 
@@ -108,9 +110,9 @@ public class PDFQuill {
      * Returns the generated PDF as a byte array. The returned array is a copy and can be mutated safely.
      *
      * @return PDF bytes
-     * @throws PrinterException when writing the PDF fails
+     * @throws PDFGenerationException when writing the PDF fails
      */
-    public byte[] getPDFBytes() throws PrinterException {
+    public byte[] getPDFBytes() throws PDFGenerationException {
         byte[] bytes = resolvePdfBytes();
         byte[] copy = new byte[bytes.length];
         System.arraycopy(bytes, 0, copy, 0, bytes.length);
@@ -121,9 +123,9 @@ public class PDFQuill {
      * Returns the generated PDF written to a temporary {@link File}.
      *
      * @return file containing the PDF bytes; deleted on JVM exit
-     * @throws PrinterException when writing the PDF fails
+     * @throws PDFExportException when writing the PDF fails
      */
-    public File getPDFFile() throws PrinterException {
+    public File getPDFFile() throws PDFExportException {
         if (this.pdfWriter.isClosed() && this.pdfFile != null && this.pdfFile.exists()) {
             return this.pdfFile;
         }
@@ -134,7 +136,7 @@ public class PDFQuill {
             writePDF(tempFile.toPath());
             return tempFile;
         } catch (IOException e) {
-            throw new PrinterException("Failed to create PDF file", e);
+            throw new PDFExportException("Failed to create PDF file", e);
         }
     }
 
@@ -143,9 +145,9 @@ public class PDFQuill {
      *
      * @param destination target path for the PDF file
      * @return the same path provided for convenience
-     * @throws PrinterException when writing the PDF fails
+     * @throws PDFExportException when writing the PDF fails
      */
-    public Path writePDF(Path destination) throws PrinterException {
+    public Path writePDF(Path destination) throws PDFExportException {
         if (destination == null) {
             throw new IllegalArgumentException("destination cannot be null");
         }
@@ -163,23 +165,23 @@ public class PDFQuill {
             this.pdfFile = destination.toFile();
             return destination;
         } catch (IOException e) {
-            throw new PrinterException("Failed to write PDF to destination", e);
+            throw new PDFExportException("Failed to write PDF to destination", e);
         }
     }
 
     /**
      * Explicitly finalises the document, equivalent to calling {@link #getBase64PDFBytes()}.
      *
-     * @throws PrinterException when saving fails
+     * @throws PDFGenerationException when saving fails
      */
-    public void close() throws PrinterException {
+    public void close() throws PDFGenerationException {
         resolvePdfBytes();
     }
 
-    private byte[] resolvePdfBytes() throws PrinterException {
+    private byte[] resolvePdfBytes() throws PDFGenerationException {
         if (this.pdfWriter.isClosed()) {
             if (this.pdf == null) {
-                throw new PrinterException("PDF content is not available after closure");
+                throw new PDFGenerationException("PDF content is not available after closure");
             }
             return this.pdf;
         }
@@ -187,7 +189,7 @@ public class PDFQuill {
         try {
             this.pdf = this.pdfWriter.saveAndGetBytes();
         } catch (IOException e) {
-            throw new PrinterException("Failed to create PDF", e);
+            throw new PDFGenerationException("Failed to create PDF", e);
         }
         return this.pdf;
     }
@@ -197,13 +199,13 @@ public class PDFQuill {
      *
      * @param text text to render
      * @return fluent reference to this instance
-     * @throws PrinterException when PDF operations fail
+     * @throws PDFGenerationException when PDF operations fail
      */
-    public PDFQuill printLine(String text) throws PrinterException {
+    public PDFQuill printLine(String text) throws PDFGenerationException {
         try {
             printLines(text, FontType.DEFAULT);
         } catch (IOException e) {
-            throw new PrinterException("Failed to write text to the PDF", e);
+            throw new PDFGenerationException("Failed to write text to the PDF", e);
         }
         return this;
     }
@@ -212,9 +214,9 @@ public class PDFQuill {
      * Inserts a single blank line, advancing the cursor vertically.
      *
      * @return fluent reference to this instance
-     * @throws PrinterException when PDF operations fail
+     * @throws PDFGenerationException when PDF operations fail
      */
-    public PDFQuill skipLine() throws PrinterException {
+    public PDFQuill skipLine() throws PDFGenerationException {
         return skipLines(1);
     }
 
@@ -223,13 +225,13 @@ public class PDFQuill {
      *
      * @param lineCount number of lines to skip; values &lt;= 0 are ignored
      * @return fluent reference to this instance
-     * @throws PrinterException when PDF operations fail
+     * @throws PDFGenerationException when PDF operations fail
      */
-    public PDFQuill skipLines(int lineCount) throws PrinterException {
+    public PDFQuill skipLines(int lineCount) throws PDFGenerationException {
         try {
             this.pdfWriter.skipLines(lineCount);
         } catch (IOException e) {
-            throw new PrinterException("Failed to skip lines in the PDF", e);
+            throw new PDFGenerationException("Failed to skip lines in the PDF", e);
         }
         return this;
     }
@@ -240,13 +242,13 @@ public class PDFQuill {
      * @param text text to render
      * @param fontType type of the font, if its bold, italic, etc
      * @return fluent reference to this instance
-     * @throws PrinterException when PDF operations fail
+     * @throws PDFGenerationException when PDF operations fail
      */
-    public PDFQuill printLine(String text, FontType fontType) throws PrinterException {
+    public PDFQuill printLine(String text, FontType fontType) throws PDFGenerationException {
         try {
             printLines(text, fontType);
         } catch (IOException e) {
-            throw new PrinterException("Failed to write text to the PDF", e);
+            throw new PDFGenerationException("Failed to write text to the PDF", e);
         }
         return this;
     }
@@ -302,9 +304,9 @@ public class PDFQuill {
      * @param code        payload to encode
      * @param barcodeType symbology to render
      * @return fluent reference to this instance
-     * @throws PrinterException when barcode generation fails
+     * @throws BarcodeGenerationException when barcode generation fails
      */
-    public PDFQuill printBarcode(String code, BarcodeType barcodeType) throws PrinterException {
+    public PDFQuill printBarcode(String code, BarcodeType barcodeType) throws BarcodeGenerationException {
         return this.printBarcode(code, barcodeType, 0, 0);
     }
 
@@ -316,9 +318,9 @@ public class PDFQuill {
      * @param height      desired height in pixels (ZXing rendering space)
      * @param width       desired width in pixels (ZXing rendering space)
      * @return fluent reference to this instance
-     * @throws PrinterException when barcode generation fails
+     * @throws BarcodeGenerationException when barcode generation fails
      */
-    public PDFQuill printBarcode(String code, BarcodeType barcodeType, int height, int width) throws PrinterException {
+    public PDFQuill printBarcode(String code, BarcodeType barcodeType, int height, int width) throws BarcodeGenerationException {
         try {
             BufferedImage image = ContentFormatter.createBarcodeImage(code, barcodeType, height, width);
 
@@ -327,7 +329,7 @@ public class PDFQuill {
 
             this.pdfWriter.writeImage(image, imageWidth, imageHeight);
         } catch (IOException e) {
-            throw new PrinterException("Failed to write barcode to the PDF", e);
+            throw new BarcodeGenerationException("Failed to write barcode to the PDF", e);
         }
         return this;
     }
@@ -336,13 +338,13 @@ public class PDFQuill {
      * Prints a cut signal, typically used to indicate receipt boundaries.
      *
      * @return fluent reference to this instance
-     * @throws PrinterException when drawing fails
+     * @throws PDFGenerationException when drawing fails
      */
-    public PDFQuill cutSignal() throws PrinterException {
+    public PDFQuill cutSignal() throws PDFGenerationException {
         try {
             this.pdfWriter.writeCutSignal();
         } catch (IOException e) {
-            throw new PrinterException("Failed to create cut mark for the PDF", e);
+            throw new PDFGenerationException("Failed to create cut mark for the PDF", e);
         }
         return this;
     }

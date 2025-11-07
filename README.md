@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 import org.pdfquill.PDFQuill;
-import org.pdfquill.exceptions.PrinterException;
+import org.pdfquill.exceptions.PDFQuillException;
 import org.pdfquill.barcode.BarcodeType;
 import org.pdfquill.paper.PaperType;
 import org.pdfquill.settings.font.FontSettings;
@@ -59,7 +59,7 @@ try {
     // Or write to a specific location:
     quill.writePDF(Paths.get("/tmp/receipt.pdf"));
     // send pdfBase64/pdfBytes/pdfFile to printer, API, etc.
-} catch (PrinterException | IOException e) {
+} catch (PDFQuillException | IOException e) {
     // handle failure (retry, log, etc.)
 }
 ```
