@@ -6,7 +6,7 @@ import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.pdfquill.exceptions.PrinterException;
+import org.pdfquill.exceptions.BarcodeGenerationException;
 import org.pdfquill.barcode.BarcodeType;
 import org.pdfquill.barcode.BarcodeUtils;
 import org.pdfquill.settings.font.FontUtils;
@@ -45,9 +45,9 @@ public class ContentFormatter {
      * @param height      desired barcode height in pixels (ZXing rendering space)
      * @param width       desired barcode width in pixels (ZXing rendering space)
      * @return A {@link BufferedImage} containing the barcode.
-     * @throws PrinterException when barcode generation fails
+     * @throws BarcodeGenerationException when barcode generation fails
      */
-    public static BufferedImage createBarcodeImage(String code, BarcodeType barcodeType, int height, int width) throws PrinterException {
+    public static BufferedImage createBarcodeImage(String code, BarcodeType barcodeType, int height, int width) throws BarcodeGenerationException {
         try {
             if (height == 0) height = 350;
             if (width == 0) width = 350;
@@ -65,7 +65,7 @@ public class ContentFormatter {
             createGraphics(image, byteMatrix, width, height);
             return image;
         } catch (Throwable e) {
-            throw new PrinterException("Failed to create barcode image", e);
+            throw new BarcodeGenerationException("Failed to create barcode image", e);
         }
     }
 
