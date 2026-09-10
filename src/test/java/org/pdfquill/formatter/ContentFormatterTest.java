@@ -63,7 +63,7 @@ class ContentFormatterTest {
         List<Text> texts = ContentFormatter.formatTextBuilder(builder, maxWidth);
 
         assertThat(texts).hasSizeGreaterThan(1);
-        assertThat(texts.getFirst().getFontSetting()).isSameAs(fontSettings);
+        assertThat(texts.get(0).getFontSetting()).isSameAs(fontSettings);
     }
 
     @Test
