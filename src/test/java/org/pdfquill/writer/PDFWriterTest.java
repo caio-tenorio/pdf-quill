@@ -84,6 +84,54 @@ class PDFWriterTest {
         }
     }
 
+    @Test
+    void thermalPaperCropsEachPageAccordingToItsOwnContentHeight() throws Exception {
+        PageLayout layout = new PageLayout(PaperType.THERMAL_80MM);
+        PDFWriter writer = new PDFWriter(layout);
+
+        int linesPerPage = (int) Math.floor(layout.getPageWritingHeight() / layout.getLineHeight());
+        int fewLines = 3;
+
+        for (int i = 0; i < linesPerPage; i++) {
+            writer.writeLine("Line " + i, FontType.DEFAULT);
+        }
+        for (int i = 0; i < fewLines; i++) {
+            writer.writeLine("Short " + i, FontType.DEFAULT);
+        }
+
+        byte[] pdfBytes = writer.saveAndGetBytes();
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            assertThat(document.getNumberOfPages()).isEqualTo(2);
+
+            float firstPageHeight = document.getPage(0).getCropBox().getHeight();
+            float secondPageHeight = document.getPage(1).getCropBox().getHeight();
+
+            // The first page renders every one of the `linesPerPage` lines, plus the writer's
+            // one-line bottom padding. The last page's own accounting always drops the height of
+            // the single line that triggered the page break (its increment is attributed to the
+            // page being closed, not the page it is actually drawn on), which happens to cancel
+            // out exactly against that same one-line padding.
+            float expectedFirstPageHeight = (linesPerPage + 1) * layout.getLineHeight();
+            float expectedSecondPageHeight = fewLines * layout.getLineHeight();
+            assertThat(firstPageHeight).isCloseTo(expectedFirstPageHeight, within(0.5f));
+            assertThat(secondPageHeight).isCloseTo(expectedSecondPageHeight, within(0.5f));
+
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setStartPage(1);
+            stripper.setEndPage(1);
+            String firstPageText = stripper.getText(document);
+            assertThat(firstPageText).contains("Line 0", "Line " + (linesPerPage - 1));
+            assertThat(firstPageText).doesNotContain("Short 0");
+
+            stripper.setStartPage(2);
+            stripper.setEndPage(2);
+            String secondPageText = stripper.getText(document);
+            assertThat(secondPageText).contains("Short 0", "Short " + (fewLines - 1));
+            assertThat(secondPageText).doesNotContain("Line 0");
+        }
+    }
+
     private static final class RecordingStripper extends PDFTextStripper {
         private final java.util.List<Float> yPositions = new java.util.ArrayList<>();
 
