@@ -37,6 +37,7 @@ public class PDFWriter {
     private PDPage currentPage;
     private PDPageContentStream contentStream;
     private final TextCursor textCursor;
+    private final List<Float> pageWrittenHeights;
 
     /**
      * Creates a writer responsible for generating a PDF according to the supplied layout.
@@ -51,6 +52,7 @@ public class PDFWriter {
         this.currentPage = null;
         this.contentStream = null;
         this.textCursor = new TextCursor();
+        this.pageWrittenHeights = new ArrayList<>();
     }
 
     private void incrementWrittenHeight() {
@@ -258,6 +260,7 @@ public class PDFWriter {
 
     private void addNewPage() throws IOException {
         if (this.contentStream != null) {
+            this.pageWrittenHeights.add(this.textCursor.getWrittenHeight());
             this.textCursor.closeTextObject();
             this.contentStream.close();
         }
@@ -269,6 +272,7 @@ public class PDFWriter {
 
     public byte[] saveAndGetBytes() throws IOException {
         if (this.contentStream != null) {
+            this.pageWrittenHeights.add(this.textCursor.getWrittenHeight());
             this.textCursor.closeTextObject();
             this.contentStream.close();
         }
@@ -286,12 +290,16 @@ public class PDFWriter {
         PDPageTree pages = document.getDocumentCatalog().getPages();
         float lineHeight = this.pageLayout.getLineHeight();
 
+        int pageIndex = 0;
         for (PDPage page : pages) {
             if (this.pageLayout.isThermalPaper()) {
+                float writtenHeight = pageIndex < this.pageWrittenHeights.size()
+                        ? this.pageWrittenHeights.get(pageIndex)
+                        : this.textCursor.getWrittenHeight();
                 PDRectangle mediaBox = page.getMediaBox();
                 PDRectangle cropBox = new PDRectangle(mediaBox.getLowerLeftX(), this.pageLayout.getPageHeight()
-                        - this.textCursor.getWrittenHeight() - lineHeight,
-                        mediaBox.getUpperRightX() - 3, this.textCursor.getWrittenHeight() + lineHeight);
+                        - writtenHeight - lineHeight,
+                        mediaBox.getUpperRightX() - 3, writtenHeight + lineHeight);
 
                 page.setCropBox(cropBox);
             } else {
@@ -299,6 +307,7 @@ public class PDFWriter {
                     document.removePage(page);
                 }
             }
+            pageIndex++;
         }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
