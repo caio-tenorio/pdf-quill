@@ -29,7 +29,7 @@ class LineAccumulatorTest {
         accumulator.flushInto(plans);
 
         assertThat(plans).hasSize(1);
-        TextLinePlan plan = plans.getFirst();
+        TextLinePlan plan = plans.get(0);
         assertThat(plan.getTextList()).hasSize(2);
         assertThat(plan.getTextList().get(0).getX()).isEqualTo(12f);
         assertThat(plan.getTextList().get(1).getX()).isEqualTo(12f + firstWidth);

@@ -180,7 +180,7 @@ class PDFQuillTest {
 
         @Override
         protected void writeString(String text, java.util.List<org.apache.pdfbox.text.TextPosition> textPositions) throws IOException {
-            if (!text.isBlank() && !textPositions.isEmpty()) {
+            if (!text.trim().isEmpty() && !textPositions.isEmpty()) {
                 yPositions.add(textPositions.get(0).getY());
             }
             super.writeString(text, textPositions);
