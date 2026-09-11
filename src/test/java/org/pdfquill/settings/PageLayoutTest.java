@@ -37,4 +37,32 @@ class PageLayoutTest {
 
         assertThat(layout.getFontSettings().getFontSize()).isEqualTo(18);
     }
+
+    @Test
+    void defaultAlignmentIsLeft() {
+        PageLayout layout = new PageLayout(PaperType.A4);
+
+        assertThat(layout.getAlignment()).isEqualTo(Alignment.LEFT);
+    }
+
+    @Test
+    void setAlignmentUpdatesValueAndTreatsNullAsLeft() {
+        PageLayout layout = new PageLayout(PaperType.A4);
+
+        layout.setAlignment(Alignment.CENTER);
+        assertThat(layout.getAlignment()).isEqualTo(Alignment.CENTER);
+
+        layout.setAlignment(null);
+        assertThat(layout.getAlignment()).isEqualTo(Alignment.LEFT);
+    }
+
+    @Test
+    void copyConstructorPreservesAlignment() {
+        PageLayout original = new PageLayout(PaperType.A4);
+        original.setAlignment(Alignment.RIGHT);
+
+        PageLayout copy = new PageLayout(original);
+
+        assertThat(copy.getAlignment()).isEqualTo(Alignment.RIGHT);
+    }
 }

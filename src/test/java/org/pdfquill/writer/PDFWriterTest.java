@@ -4,8 +4,10 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.Test;
 import org.pdfquill.paper.PaperType;
+import org.pdfquill.settings.Alignment;
 import org.pdfquill.settings.PageLayout;
 import org.pdfquill.settings.font.FontType;
+import org.pdfquill.settings.font.FontUtils;
 
 import java.io.IOException;
 
@@ -132,8 +134,93 @@ class PDFWriterTest {
         }
     }
 
+    @Test
+    void writeLineDefaultAlignmentStaysAtStartX() throws Exception {
+        PageLayout layout = new PageLayout(PaperType.A4);
+        PDFWriter writer = new PDFWriter(layout);
+
+        writer.writeLine("Left aligned", FontType.DEFAULT);
+
+        byte[] pdfBytes = writer.saveAndGetBytes();
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(layout.getStartX(), within(0.5f));
+        }
+    }
+
+    @Test
+    void writeLineRightAlignmentAnchorsTextToRightEdge() throws Exception {
+        PageLayout layout = new PageLayout(PaperType.A4);
+        PDFWriter writer = new PDFWriter(layout);
+        String text = "Right aligned";
+
+        writer.writeLine(text, FontType.DEFAULT, Alignment.RIGHT);
+
+        byte[] pdfBytes = writer.saveAndGetBytes();
+
+        float textWidth = FontUtils.getTextWidth(text, layout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                layout.getFontSettings().getFontSize());
+        float expectedX = layout.getStartX() + layout.getMaxLineWidth() - textWidth;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void writeLineCenterAlignmentCentersText() throws Exception {
+        PageLayout layout = new PageLayout(PaperType.A4);
+        PDFWriter writer = new PDFWriter(layout);
+        String text = "Centered";
+
+        writer.writeLine(text, FontType.DEFAULT, Alignment.CENTER);
+
+        byte[] pdfBytes = writer.saveAndGetBytes();
+
+        float textWidth = FontUtils.getTextWidth(text, layout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                layout.getFontSettings().getFontSize());
+        float expectedX = layout.getStartX() + (layout.getMaxLineWidth() - textWidth) / 2f;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void writeLineNullAlignmentFallsBackToLayoutDefault() throws Exception {
+        PageLayout layout = new PageLayout(PaperType.A4);
+        layout.setAlignment(Alignment.CENTER);
+        PDFWriter writer = new PDFWriter(layout);
+        String text = "Falls back";
+
+        writer.writeLine(text, FontType.DEFAULT, null);
+
+        byte[] pdfBytes = writer.saveAndGetBytes();
+
+        float textWidth = FontUtils.getTextWidth(text, layout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                layout.getFontSettings().getFontSize());
+        float expectedX = layout.getStartX() + (layout.getMaxLineWidth() - textWidth) / 2f;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
     private static final class RecordingStripper extends PDFTextStripper {
         private final java.util.List<Float> yPositions = new java.util.ArrayList<>();
+        private final java.util.List<Float> xPositions = new java.util.ArrayList<>();
 
         private RecordingStripper() throws IOException {
             super();
@@ -143,12 +230,17 @@ class PDFWriterTest {
         protected void writeString(String text, java.util.List<org.apache.pdfbox.text.TextPosition> textPositions) throws IOException {
             if (!text.trim().isEmpty() && !textPositions.isEmpty()) {
                 yPositions.add(textPositions.get(0).getY());
+                xPositions.add(textPositions.get(0).getX());
             }
             super.writeString(text, textPositions);
         }
 
         java.util.List<Float> getYPositions() {
             return yPositions;
+        }
+
+        java.util.List<Float> getXPositions() {
+            return xPositions;
         }
     }
 }

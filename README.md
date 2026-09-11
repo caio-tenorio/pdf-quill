@@ -6,6 +6,7 @@ Java library focused on generating print-ready PDFs for receipts, tickets, and o
 - PDF generation powered by Apache PDFBox with declarative layout configuration (margins, printable area, line height, lines per page)
 - Support for multiple paper formats (`A4`, `A5`, `THERMAL_56MM`, and more) with thermal paper detection for smart cropping
 - Text printing with automatic word wrapping, mixed font styles per line through `TextBuilder`, optional whitespace preservation, line skipping helpers (`skipLine`/`skipLines`), and cut signals via `cutSignal`
+- Text alignment (`Alignment.LEFT`/`RIGHT`/`CENTER`) for `printLine`, configurable as a global default or overridden per call
 - Image and barcode/QR Code rendering using ZXing through `printImage` and `printBarcode`
 - Font customization (`FontSettings`) and basic PDF permission control (`PermissionSettings`)
 - Output helpers: Base64 (`getBase64PDFBytes`), raw bytes (`getPDFBytes`), temp files (`getPDFFile`), or custom paths via `writePDF(Path)`
@@ -98,12 +99,34 @@ try {
 }
 ```
 
+## Text Alignment
+
+`printLine` supports `Alignment.LEFT`, `Alignment.RIGHT`, and `Alignment.CENTER`. `LEFT` is always the out-of-the-box default (same as a plain `new PDFQuill()`, matching how most text editors behave)—you only get a different default if you explicitly ask for one via the builder. Once a default is set (or left as `LEFT`), you can still override it for individual lines when needed; word-wrapped lines are each aligned independently.
+
+```java
+import org.pdfquill.PDFQuill;
+import org.pdfquill.settings.Alignment;
+import org.pdfquill.settings.font.FontType;
+
+// No withAlignment(...) call -> defaults to LEFT, same as new PDFQuill().
+PDFQuill quill = PDFQuill.builder()
+        .withAlignment(Alignment.CENTER) // opt in to a different document-wide default
+        .build();
+
+quill.printLine("Sample Store");                     // uses the configured default: CENTER
+quill.printLine("Total: R$ 29,90", Alignment.RIGHT);  // per-call override
+quill.printLine("Item description", FontType.BOLD, Alignment.LEFT); // font + alignment override
+```
+
+This applies only to `printLine`; lines built via `TextBuilder`/`writeFromTextBuilder` remain left-anchored for now.
+
 ## Configuration Tips
 - **Fonts**: tweak default/bold/italic fonts via `FontSettings` or rely on `configureFontSettings` for inline customization in the builder.
 - **Layout**: instantiate `PageLayout` manually or combine `withPaperType` with `withPageLayout` to customize margins, line height, and maximum line width.
 - **Line breaks**: use `skipLine()` or `skipLines(int)` to insert vertical spacing without emitting text while keeping pagination intact.
 - **Permissions**: enable or disable printing, editing, and content extraction with `withPermissionSettings` or `configurePermissionSettings`.
 - **Whitespace**: call `preserveSpaces(true)` to keep leading spaces, which is handy for manual alignment in receipts.
+- **Alignment**: see the [Text Alignment](#text-alignment) section above for `withAlignment`/`updateAlignment` (global default) and per-call overrides.
 - **Images**: `printImage` accepts a `ByteArrayInputStream`; convert files using `Files.readAllBytes(path)`.
 
 ## Dependencies
