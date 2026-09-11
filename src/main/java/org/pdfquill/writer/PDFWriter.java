@@ -12,6 +12,8 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.pdfquill.formatter.ContentFormatter;
 import org.pdfquill.settings.font.FontUtils;
 import org.pdfquill.settings.font.FontType;
+import org.pdfquill.settings.Alignment;
+import org.pdfquill.settings.AlignmentUtils;
 import org.pdfquill.settings.PageLayout;
 
 import javax.imageio.ImageIO;
@@ -75,15 +77,42 @@ public class PDFWriter {
 
     /**
      * Writes a single line of text to the document, automatically handling pagination.
+     * Uses the layout's configured default alignment.
      *
      * @param line The text line to be written.
      * @throws IOException if writing to the content stream fails.
      */
     public void writeLine(String line, FontType fontType) throws IOException {
+        writeLine(line, fontType, this.pageLayout.getAlignment());
+    }
+
+    /**
+     * Writes a single line of text to the document, automatically handling pagination.
+     *
+     * @param line      The text line to be written.
+     * @param fontType  font variant to render the line with.
+     * @param alignment alignment to apply to this line; falls back to the layout's default when {@code null}.
+     * @throws IOException if writing to the content stream fails.
+     */
+    public void writeLine(String line, FontType fontType, Alignment alignment) throws IOException {
         incrementWrittenHeight();
         addNewPageIfNeeded();
         float lineY = getCurrentY();
-        addTextLine(line, this.pageLayout.getStartX(), lineY, fontType);
+        float lineX = computeLineX(line, fontType, alignment);
+        addTextLine(line, lineX, lineY, fontType);
+    }
+
+    private float computeLineX(String line, FontType fontType, Alignment alignment) throws IOException {
+        Alignment effective = alignment != null ? alignment : this.pageLayout.getAlignment();
+        if (effective == Alignment.LEFT || line == null || line.isEmpty()) {
+            return this.pageLayout.getStartX();
+        }
+
+        PDType1Font font = this.pageLayout.getFontSettings().getFontByFontType(fontType);
+        int fontSize = this.pageLayout.getFontSettings().getFontSize();
+        float textWidth = FontUtils.getTextWidth(line, font, fontSize);
+
+        return AlignmentUtils.resolveX(effective, this.pageLayout.getStartX(), this.pageLayout.getMaxLineWidth(), textWidth);
     }
 
     /**

@@ -18,6 +18,7 @@ public class PageLayout {
     private float lineSpacing = 1.15f;
 
     private PaperType paperType = PaperType.A4;
+    private Alignment alignment = Alignment.LEFT;
 
     //Defined by margins
     private float startX;
@@ -61,6 +62,7 @@ public class PageLayout {
             this.marginBottom = other.marginBottom;
             this.fontSettings = other.fontSettings != null ? other.fontSettings.copy() : new FontSettings();
             this.paperType = other.paperType != null ? other.paperType : PaperType.A4;
+            this.alignment = other.alignment != null ? other.alignment : Alignment.LEFT;
         }
         this.assignDependentAttrs();
     }
@@ -138,6 +140,22 @@ public class PageLayout {
     public void setPaperType(PaperType paperType) {
         this.paperType = paperType != null ? paperType : PaperType.A4;
         this.assignDependentAttrs();
+    }
+
+    /**
+     * @return currently configured default text alignment
+     */
+    public Alignment getAlignment() {
+        return this.alignment;
+    }
+
+    /**
+     * Sets the default text alignment applied to printed lines that don't request an explicit override.
+     *
+     * @param alignment new default alignment; defaults to {@link Alignment#LEFT} when {@code null}
+     */
+    public void setAlignment(Alignment alignment) {
+        this.alignment = alignment != null ? alignment : Alignment.LEFT;
     }
 
     /**

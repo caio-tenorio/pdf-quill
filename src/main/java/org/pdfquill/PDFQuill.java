@@ -10,6 +10,7 @@ import org.pdfquill.measurements.MeasurementUtils;
 import org.pdfquill.paper.PaperType;
 import org.pdfquill.settings.font.FontSettings;
 import org.pdfquill.settings.font.FontType;
+import org.pdfquill.settings.Alignment;
 import org.pdfquill.settings.PageLayout;
 import org.pdfquill.settings.permissions.PermissionSettings;
 import org.pdfquill.writer.PDFWriter;
@@ -65,6 +66,9 @@ public class PDFQuill {
             builder.fontSettingsCustomizer.accept(layout.getFontSettings());
             layout.recalculate();
         }
+        if (builder.alignment != null) {
+            layout.setAlignment(builder.alignment);
+        }
 
         this.pageLayout = layout;
 
@@ -94,6 +98,16 @@ public class PDFQuill {
      */
     public void updateFontSettings(FontSettings fontSettings) {
         this.pageLayout.setFontSettings(fontSettings);
+    }
+
+    /**
+     * Replaces the default text alignment applied to subsequent {@code printLine} calls
+     * that don't explicitly request an alignment.
+     *
+     * @param alignment new default alignment
+     */
+    public void updateAlignment(Alignment alignment) {
+        this.pageLayout.setAlignment(alignment);
     }
 
     /**
@@ -202,12 +216,19 @@ public class PDFQuill {
      * @throws PDFGenerationException when PDF operations fail
      */
     public PDFQuill printLine(String text) throws PDFGenerationException {
-        try {
-            printLines(text, FontType.DEFAULT);
-        } catch (IOException e) {
-            throw new PDFGenerationException("Failed to write text to the PDF", e);
-        }
-        return this;
+        return printLineInternal(text, FontType.DEFAULT, null);
+    }
+
+    /**
+     * Prints a text block, applying word wrapping and pagination automatically.
+     *
+     * @param text      text to render
+     * @param alignment alignment to apply to this text, overriding the configured default
+     * @return fluent reference to this instance
+     * @throws PDFGenerationException when PDF operations fail
+     */
+    public PDFQuill printLine(String text, Alignment alignment) throws PDFGenerationException {
+        return printLineInternal(text, FontType.DEFAULT, alignment);
     }
 
     /**
@@ -245,22 +266,39 @@ public class PDFQuill {
      * @throws PDFGenerationException when PDF operations fail
      */
     public PDFQuill printLine(String text, FontType fontType) throws PDFGenerationException {
+        return printLineInternal(text, fontType, null);
+    }
+
+    /**
+     * Prints a text block, applying word wrapping and pagination automatically.
+     *
+     * @param text      text to render
+     * @param fontType  type of the font, if its bold, italic, etc
+     * @param alignment alignment to apply to this text, overriding the configured default
+     * @return fluent reference to this instance
+     * @throws PDFGenerationException when PDF operations fail
+     */
+    public PDFQuill printLine(String text, FontType fontType, Alignment alignment) throws PDFGenerationException {
+        return printLineInternal(text, fontType, alignment);
+    }
+
+    private PDFQuill printLineInternal(String text, FontType fontType, Alignment alignment) throws PDFGenerationException {
         try {
-            printLines(text, fontType);
+            printLines(text, fontType, alignment);
         } catch (IOException e) {
             throw new PDFGenerationException("Failed to write text to the PDF", e);
         }
         return this;
     }
 
-    private void printLines(String text, FontType fontType) throws IOException {
+    private void printLines(String text, FontType fontType, Alignment alignment) throws IOException {
         PDType1Font font = this.pageLayout.getFontSettings().getFontByFontType(fontType);
         int fontSize = this.pageLayout.getFontSettings().getFontSize();
         float maxWidth = this.pageLayout.getMaxLineWidth();
 
         List<String> lines = ContentFormatter.formatTextToLines(text, font, fontSize, maxWidth, false);
         for (String line : lines) {
-            this.pdfWriter.writeLine(line, fontType);
+            this.pdfWriter.writeLine(line, fontType, alignment);
         }
     }
 
@@ -378,6 +416,7 @@ public class PDFQuill {
         private PageLayout pageLayout;
         private FontSettings fontSettings;
         private Consumer<FontSettings> fontSettingsCustomizer;
+        private Alignment alignment;
         private Float marginLeft;
         private Float marginRight;
         private Float marginTop;
@@ -460,6 +499,20 @@ public class PDFQuill {
          */
         public Builder configureFontSettings(Consumer<FontSettings> fontSettingsCustomizer) {
             this.fontSettingsCustomizer = fontSettingsCustomizer;
+            return this;
+        }
+
+        /**
+         * Sets the default text alignment applied to printed lines that don't request an explicit override.
+         *
+         * @param alignment default alignment; must not be {@code null}
+         * @return this builder
+         */
+        public Builder withAlignment(Alignment alignment) {
+            if (alignment == null) {
+                throw new IllegalArgumentException("alignment cannot be null");
+            }
+            this.alignment = alignment;
             return this;
         }
 

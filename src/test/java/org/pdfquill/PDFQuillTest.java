@@ -7,6 +7,8 @@ import org.pdfquill.exceptions.PDFGenerationException;
 import org.pdfquill.paper.PaperType;
 import org.pdfquill.settings.font.FontSettings;
 import org.pdfquill.settings.font.FontType;
+import org.pdfquill.settings.font.FontUtils;
+import org.pdfquill.settings.Alignment;
 import org.pdfquill.settings.PageLayout;
 
 import java.io.File;
@@ -171,8 +173,182 @@ class PDFQuillTest {
         }
     }
 
+    @Test
+    void printLineDefaultAlignmentIsLeftUnchanged() throws Exception {
+        PDFQuill quill = new PDFQuill();
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+
+        quill.printLine("Left by default");
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedLayout.getStartX(), within(0.5f));
+        }
+    }
+
+    @Test
+    void printLineWithExplicitRightAlignmentOverride() throws Exception {
+        PDFQuill quill = new PDFQuill();
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+        String text = "Right override";
+
+        quill.printLine(text, Alignment.RIGHT);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+        float textWidth = FontUtils.getTextWidth(text, expectedLayout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                expectedLayout.getFontSettings().getFontSize());
+        float expectedX = expectedLayout.getStartX() + expectedLayout.getMaxLineWidth() - textWidth;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void printLineWithExplicitCenterAlignmentOverride() throws Exception {
+        PDFQuill quill = new PDFQuill();
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+        String text = "Center override";
+
+        quill.printLine(text, Alignment.CENTER);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+        float textWidth = FontUtils.getTextWidth(text, expectedLayout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                expectedLayout.getFontSettings().getFontSize());
+        float expectedX = expectedLayout.getStartX() + (expectedLayout.getMaxLineWidth() - textWidth) / 2f;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void printLineWithFontTypeAndAlignmentOverrideUsesCorrectFontMetrics() throws Exception {
+        PDFQuill quill = new PDFQuill();
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+        String text = "Bold right override";
+
+        quill.printLine(text, FontType.BOLD, Alignment.RIGHT);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+        float textWidth = FontUtils.getTextWidth(text, expectedLayout.getFontSettings().getFontByFontType(FontType.BOLD),
+                expectedLayout.getFontSettings().getFontSize());
+        float expectedX = expectedLayout.getStartX() + expectedLayout.getMaxLineWidth() - textWidth;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void builderWithAlignmentAppliesGlobalDefaultWithoutPerCallOverride() throws Exception {
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+        String text = "Implicit center";
+        PDFQuill quill = PDFQuill.builder()
+                .withAlignment(Alignment.CENTER)
+                .build();
+
+        quill.printLine(text);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+        float textWidth = FontUtils.getTextWidth(text, expectedLayout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                expectedLayout.getFontSettings().getFontSize());
+        float expectedX = expectedLayout.getStartX() + (expectedLayout.getMaxLineWidth() - textWidth) / 2f;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void updateAlignmentChangesDefaultForSubsequentPrintLineCalls() throws Exception {
+        PDFQuill quill = new PDFQuill();
+        PageLayout expectedLayout = new PageLayout(PaperType.A4);
+        String text = "Updated to right";
+
+        quill.updateAlignment(Alignment.RIGHT);
+        quill.printLine(text);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+        float textWidth = FontUtils.getTextWidth(text, expectedLayout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                expectedLayout.getFontSettings().getFontSize());
+        float expectedX = expectedLayout.getStartX() + expectedLayout.getMaxLineWidth() - textWidth;
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(1);
+            assertThat(stripper.getXPositions().get(0)).isCloseTo(expectedX, within(0.5f));
+        }
+    }
+
+    @Test
+    void builderRejectsNullAlignment() {
+        PDFQuill.Builder builder = PDFQuill.builder();
+
+        assertThatThrownBy(() -> builder.withAlignment(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("alignment");
+    }
+
+    @Test
+    void printLineWrappedMultiLineTextAlignsEachLineIndependently() throws Exception {
+        PDFQuill quill = PDFQuill.builder()
+                .withAlignment(Alignment.RIGHT)
+                .build();
+
+        // Forces at least two wrapped lines of different lengths on A4 paper.
+        String longText = "Alpha Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima Mike November";
+        quill.printLine(longText);
+
+        byte[] pdfBytes = Base64.getDecoder().decode(quill.getBase64PDFBytes());
+
+        try (PDDocument document = PDDocument.load(pdfBytes)) {
+            RecordingStripper stripper = new RecordingStripper();
+            stripper.getText(document);
+            assertThat(stripper.getXPositions()).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(stripper.getLineTexts()).hasSameSizeAs(stripper.getXPositions());
+
+            PageLayout expectedLayout = new PageLayout(PaperType.A4);
+            float expectedRightEdge = expectedLayout.getStartX() + expectedLayout.getMaxLineWidth();
+
+            java.util.Set<Float> distinctX = new java.util.HashSet<>();
+            for (int i = 0; i < stripper.getLineTexts().size(); i++) {
+                String line = stripper.getLineTexts().get(i);
+                float x = stripper.getXPositions().get(i);
+                distinctX.add(x);
+                float textWidth = FontUtils.getTextWidth(line, expectedLayout.getFontSettings().getFontByFontType(FontType.DEFAULT),
+                        expectedLayout.getFontSettings().getFontSize());
+                // Every wrapped line, regardless of its own length, must independently
+                // land on the same right edge under RIGHT alignment.
+                assertThat(x + textWidth).isCloseTo(expectedRightEdge, within(1.5f));
+            }
+            // Lines have different lengths, so a correct per-line computation produces
+            // different X starting points (a single block-level shift would not).
+            assertThat(distinctX.size()).isGreaterThanOrEqualTo(2);
+        }
+    }
+
     private static final class RecordingStripper extends PDFTextStripper {
         private final java.util.List<Float> yPositions = new java.util.ArrayList<>();
+        private final java.util.List<Float> xPositions = new java.util.ArrayList<>();
+        private final java.util.List<String> lineTexts = new java.util.ArrayList<>();
 
         private RecordingStripper() throws IOException {
             super();
@@ -182,12 +358,22 @@ class PDFQuillTest {
         protected void writeString(String text, java.util.List<org.apache.pdfbox.text.TextPosition> textPositions) throws IOException {
             if (!text.trim().isEmpty() && !textPositions.isEmpty()) {
                 yPositions.add(textPositions.get(0).getY());
+                xPositions.add(textPositions.get(0).getX());
+                lineTexts.add(text.trim());
             }
             super.writeString(text, textPositions);
         }
 
         java.util.List<Float> getYPositions() {
             return yPositions;
+        }
+
+        java.util.List<Float> getXPositions() {
+            return xPositions;
+        }
+
+        java.util.List<String> getLineTexts() {
+            return lineTexts;
         }
     }
 }
